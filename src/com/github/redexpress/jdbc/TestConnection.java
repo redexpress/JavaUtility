@@ -1,4 +1,4 @@
-package gavinyang.jdbc;
+package com.github.redexpress.jdbc;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;

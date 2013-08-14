@@ -1,4 +1,4 @@
-package gavinyang.apn;
+package com.github.redexpress.apn;
 
 import javapns.back.PushNotificationManager;
 import javapns.back.SSLConnectionHelper;
