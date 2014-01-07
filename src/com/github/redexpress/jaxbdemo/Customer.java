@@ -1,14 +1,18 @@
 package com.github.redexpress.jaxbdemo;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import javax.xml.bind.annotation.XmlAttribute;  
 import javax.xml.bind.annotation.XmlElement;  
 import javax.xml.bind.annotation.XmlRootElement;  
   
 @XmlRootElement  
 public class Customer {  
-    String name;  
-    int age;  
-    int id;  
+    private String name;  
+    private int age;  
+    private int id;
+    private Set<Book> book;
   
     @XmlElement  
     public String getName() {  
@@ -32,10 +36,20 @@ public class Customer {
     }  
     public void setId(int id) {  
         this.id = id;  
-    }  
-      
-    @Override  
-    public String toString() {  
-        return "Customer [id=" + id + ",name=" + name + ",age=" + age + "]";  
-    }  
+    }
+    
+    @XmlElement
+    public Set<Book> getBook() {
+		return book;
+	}
+	public void setBook(Set<Book> book) {
+		this.book = book;
+	}
+	@Override
+	public String toString() {
+		return "Customer [name=" + name + ", age=" + age + ", id=" + id
+				+ ", book=" + book + "]";
+	}
+	
+	
 } 
