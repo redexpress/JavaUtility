@@ -707,3 +707,86 @@ gcloud secrets add-iam-policy-binding airflow-connections-user1-connection \
     --role="roles/secretmanager.secretAccessor"
 ```
 
+
+在 Airflow 中，通过连接管理来配置 Google Cloud 服务的凭证是比较常见的做法。以下是详细的步骤说明，包括如何通过 Airflow Connection 功能管理 Google Cloud Service Account 凭证，并将其应用到你的 DAG 中。
+
+### 1. 在 Airflow 中创建 Google Cloud Connection
+
+你需要在 Airflow 的 Web UI 中添加一个 Google Cloud 类型的 Connection，以便 DAG 可以使用它来访问 Google Cloud 服务。
+
+#### 具体步骤：
+
+1. **打开 Airflow Web UI**：
+   - 在浏览器中访问你的 Airflow 实例，通常是通过类似 `http://<your-airflow-server>:8080` 的地址。
+
+2. **导航到连接管理页面**：
+   - 在 Web UI 的导航栏中，点击 **Admin**，然后选择 **Connections**。
+
+3. **创建新连接**：
+   - 在连接管理页面，点击右上角的 **“+”**（Add a new record）按钮，创建一个新的连接。
+
+4. **填写连接信息**：
+   - **Conn Id**：为你的连接提供一个唯一的 ID，举例来说可以是 `my_gcp_connection`。
+   - **Conn Type**：选择 **Google Cloud** 作为连接类型。
+   - **Project Id**：输入你的 Google Cloud 项目的 ID。
+   - **Keyfile Path**：如果你有一个本地的 Service Account JSON 文件，可以在这里输入该文件的路径。
+   - **Keyfile JSON**：如果没有文件，而是有 Service Account 的 JSON 凭证内容，可以直接将整个 JSON 粘贴到这个字段中。
+
+   例如，如果你的 JSON 看起来像这样：
+
+   ```json
+   {
+       "type": "service_account",
+       "project_id": "your_project_id",
+       "private_key_id": "your_private_key_id",
+       "private_key": "-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n",
+       "client_email": "your-service-account@your-project.iam.gserviceaccount.com",
+       "client_id": "your_client_id",
+       "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+       "token_uri": "https://oauth2.googleapis.com/token",
+       "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+       "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/your-service-account%40your-project.iam.gserviceaccount.com"
+   }
+   ```
+
+   你需要将整个 JSON 文件的内容直接复制粘贴到 **Keyfile JSON** 字段中。
+
+5. **保存连接**：
+   - 完成所有必需字段的填写后，点击 **Save** 保存这个连接。
+
+### 2. 在 DAG 中使用 Google Cloud Connection
+
+当你在 Airflow 中配置好 Google Cloud Connection 后，就可以在 DAG 中通过连接 ID 来使用它。
+
+#### 示例：
+
+```python
+from airflow import DAG
+from airflow.providers.google.cloud.hooks.secret_manager import SecretManagerHook
+from airflow.utils.dates import days_ago
+from airflow.operators.python_operator import PythonOperator
+
+def access_secret():
+    hook = SecretManagerHook(gcp_conn_id='my_gcp_connection')
+    secret_value = hook.get_secret(secret_id='your_secret_id', project_id='your_project_id')
+    print(f"Retrieved secret: {secret_value}")
+
+with DAG(dag_id='gcp_secret_access_dag',
+         start_date=days_ago(1),
+         schedule_interval=None) as dag:
+
+    get_secret = PythonOperator(
+        task_id='get_secret',
+        python_callable=access_secret
+    )
+```
+
+#### 代码说明：
+- **`SecretManagerHook(gcp_conn_id='my_gcp_connection')`**：`gcp_conn_id` 对应的是你在 Airflow UI 中创建的连接 ID。通过这种方式，你可以直接访问 Google Cloud API，而无需手动设置凭证或环境变量。
+- **获取 Secret**：在 DAG 中使用 `SecretManagerHook` 来通过 Google Cloud Secret Manager 获取 secret。
+
+### 总结
+
+- **Keyfile JSON 字段**：你可以将整个 Service Account 的 JSON 文件内容粘贴到该字段中，无需存储到本地文件。
+- **使用 Connection**：在 DAG 中通过连接 ID (`gcp_conn_id`) 来调用 Google Cloud API，简化了凭证管理，避免了将凭证硬编码到代码中。
+
