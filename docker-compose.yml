@@ -1,0 +1,24 @@
+version: '3'
+services:
+  mysql:
+    restart: always
+    image: mysql:5.7
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+    environment:
+      - "MYSQL_ROOT_PASSWORD=config"
+      - "MYSQL_DATABASE=config"
+      - "TZ=Asia/Shanghai"
+    ports:
+      - 8306:3306
+  pg:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: scott
+      POSTGRES_PASSWORD: tiger
+      PGDATA: /data/postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - ./pg-data:/data/postgres
