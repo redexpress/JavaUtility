@@ -22,3 +22,126 @@ def cluster_policy(dag: DAG):
         task.pre_execute = set_queue_on_execute            # 4
         task.on_execute_callback = set_queue_on_execute    # 5
 ```
+
+old
+```
+# def custom_dag_policy(dag: DAG):
+#     dag_file_path = dag.fileloc
+#     print(f'paTh: {dag_file_path}')
+#     match = re.search(r'/harbor/([^/]+)/', dag_file_path)
+#     for task in dag.tasks:
+#         task.queue = 'wcl_dis_uk'
+    # if match:
+    #     workspace_name = match.group(1)
+    #     print(f'wS nAme: {workspace_name}')
+    #     queue_name = f"ws_{workspace_name.replace('-', '_')}"
+    #     dag.default_args = dag.default_args or {}
+    #     dag.default_args['queue'] = queue_name
+    #     print(f"DAG {dag.dag_id} assigned to queue '{queue_name}' based on workspace '{workspace_name}'")
+    # else:
+    #     print(f'DAG name error:{dag_file_path}')
+```
+
+
+## DAG 1
+```python
+from airflow import DAG
+from airflow.operators.bash_operator import BashOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.hooks.base_hook import BaseHook
+from datetime import datetime
+import re
+
+
+def read_file_content(ti=None, conn_id=None, **kwargs):
+    conn = BaseHook.get_connection(conn_id)
+    path = conn.extra_dejson.get('path', '')
+    print('filepath is:', path)
+    print('conn_id is:', conn_id)
+    ti.xcom_push(key='conn_id', value=conn_id)
+
+
+def dummy_function(dag: DAG):
+    queue_name = dag.default_args.get('queue', 'default_queue')
+    print(f"===DAG '{dag.dag_id}' has default queue: {queue_name}")
+    for task in dag.tasks:
+        print(f"===Task '{task.task_id}' in DAG '{dag.dag_id}' has queue: {task.queue} or {queue_name}")
+
+
+with DAG(
+    'wcl-dis-',
+    start_date=datetime(2023, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=['example', 'my']
+) as dag:
+
+    show_date = BashOperator(
+        task_id='init_release',
+        bash_command='date'
+    )
+
+    read_file = PythonOperator(
+        task_id='start_release',
+        python_callable=dummy_function,
+        op_kwargs={'conn_id': 'my_foo'},
+        provide_context=True,
+    )
+
+    show_date >> read_file
+```
+
+## DAG 2
+```python
+from airflow import DAG
+from airflow.operators.bash_operator import BashOperator
+from airflow.operators.python_operator import PythonOperator
+from airflow.operators.dummy import DummyOperator
+from airflow.hooks.base_hook import BaseHook
+from datetime import datetime
+
+
+def dummy_function(ti=None, conn_id=None, **kwargs):
+    print('METHOD dummy_function CALLED')
+
+
+def log_task(task_id):
+    print(f'Task {task_id} has been executed.')
+
+
+with DAG(
+    'my_dag',
+    start_date=datetime(2023, 1, 1),
+    schedule_interval=None,
+    catchup=False,
+    tags=['example', 'my']
+) as dag:
+
+    show_date = BashOperator(
+        task_id='show_date1',
+        bash_command='date'
+    )
+
+    python_dummy = PythonOperator(
+        task_id='dummy_func',
+        python_callable=dummy_function,
+        op_kwargs={'conn_id': 'my_foo'},
+        provide_context=True,
+    )
+
+    task_default = PythonOperator(
+        task_id='task_default_queue',
+        python_callable=log_task,
+        op_kwargs={'task_id': 'task_default_queue'},
+        queue='default' 
+    )
+
+    task_custom = PythonOperator(
+        task_id='task_custom_queue',
+        python_callable=log_task,
+        op_kwargs={'task_id': 'task_custom_queue'},
+        queue='wcl_dis_uk'
+    )
+
+    show_date >> python_dummy >> task_default >> task_custom
+```
