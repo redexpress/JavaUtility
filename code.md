@@ -3,7 +3,7 @@
 from airflow.models import DAG
 
 def cluster_policy(dag: DAG):
-    queue_name = 'wcl_dis_uk'
+    queue_name = 'queue_name'
 
     def set_queue_pre_execute(context: Dict[str, Any]):
         task_instance = context['task_instance']
@@ -145,3 +145,28 @@ with DAG(
 
     show_date >> python_dummy >> task_default >> task_custom
 ```
+
+## command
+```
+airflow celery worker --queues default
+AIRFLOW__CELERY__WORKER_LOG_SERVER_PORT=8794 airflow celery worker --queues wcl_dis_uk
+```
+
+**config**
+```ini
+[celery]
+broker_url = redis://localhost:6379/0
+result_backend = redis://localhost:6379/0
+default_queue = default
+worker_queues = default, my_queue
+[core]
+# executor = SequentialExecutor
+executor = CeleryExecutor
+load_examples = False
+[database]
+# sql_alchemy_conn = sqlite:////home/xd/airflow/airflow.db
+sql_alchemy_conn = postgresql+psycopg2://scott:tiger@localhost:5432/postgres
+****
+```
+
+
