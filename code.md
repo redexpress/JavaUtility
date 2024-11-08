@@ -1,3 +1,29 @@
+```python
+import yaml
+
+# 读取 YAML 文件
+with open("workers.yaml", "r") as yaml_file:
+    config = yaml.safe_load(yaml_file)
+
+# 读取模板文件
+with open("template.txt", "r") as template_file:
+    template_content = template_file.read()
+
+# 根据 YAML 中的每个 worker 生成文件
+for worker in config["workers"]["workers"]:
+    # 替换模板中的占位符
+    worker_content = template_content.replace("REPLACEMENT__NAME", worker["name"])
+    worker_content = worker_content.replace("REPLACEMENT__QUEUE", worker["queue"])
+
+    # 保存生成的文件，命名为 worker 的名字
+    output_filename = f"{worker['name']}.txt"
+    with open(output_filename, "w") as output_file:
+        output_file.write(worker_content)
+    
+    print(f"Generated {output_filename}")
+
+```
+
 ## airflow_local_settings.py
 ```python
 from airflow.models import DAG
